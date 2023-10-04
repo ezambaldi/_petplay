@@ -23,7 +23,7 @@ class AudiosViewModel(
         viewModelScope.launch {
             when (val result = audioUseCase.getAudios()) {
                 is GenericResult.Success -> {
-                    result.data?.let {
+                    result.data.let {
                         audios.addAll(it)
                     }
                     setState {
@@ -42,6 +42,10 @@ class AudiosViewModel(
                 }
             }
         }
+    }
+
+    private fun setStateDefault() {
+        setState { copy(audioState = AudioState.Default) }
     }
 
     private fun deleteAudio(id: Int) {
@@ -67,7 +71,24 @@ class AudiosViewModel(
 
     private fun addAudio(audio: Audio) {
         viewModelScope.launch {
-            audioUseCase.addAudio(audio)
+            when (val result = audioUseCase.addAudio(audio)) {
+                is GenericResult.Success -> {
+                    fetchAudioList(
+                        isShowTopMessage = true,
+                        topMessage = "",
+                        typeMessage = TypeMessage.SUCCESS
+                    )
+                }
+                is GenericResult.Error -> {
+                    fetchAudioList(
+                        isShowTopMessage = true,
+                        topMessage = result.errorMessage,
+                        typeMessage = TypeMessage.ERROR
+                    )
+                }
+            }
+
+
         }
     }
 
@@ -89,6 +110,7 @@ class AudiosViewModel(
         ) : ViewIntent()
         data class DeleteAudio(val id: Int): ViewIntent()
         data class AddAudio(val audio: Audio): ViewIntent()
+        object setStateDefault: ViewIntent()
     }
 
     override fun inicialState(): ViewState = ViewState()
@@ -96,8 +118,9 @@ class AudiosViewModel(
     override fun intent(intent: ViewIntent) {
         when (intent) {
             is ViewIntent.FetchAudioList -> { fetchAudioList() }
-            is ViewIntent.AddAudio -> { addAudio(intent.audio)}
+            is ViewIntent.AddAudio -> { addAudio(intent.audio) }
             is ViewIntent.DeleteAudio -> { deleteAudio(intent.id) }
+            is ViewIntent.setStateDefault -> { setStateDefault() }
         }
     }
 

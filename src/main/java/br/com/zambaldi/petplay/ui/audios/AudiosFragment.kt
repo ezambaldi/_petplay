@@ -13,6 +13,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import br.com.zambaldi.petplay.R
+import br.com.zambaldi.petplay.models.Audio
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -32,6 +33,7 @@ class AudiosFragment : Fragment(R.layout.fragment_audios) {
                         state = state.value.audioState,
                         callFetch = ::fetchAudioList,
                         deleteAudio = ::deleteAudio,
+                        addAudio = ::addAudio,
                     )
                 }
             }
@@ -44,9 +46,7 @@ class AudiosFragment : Fragment(R.layout.fragment_audios) {
                 launch {
                     map { it.audioState }.distinctUntilChanged().collect {
                         when (it) {
-                            is AudioState.Loaded -> {
-                                updateCompose()
-                            }
+                            is AudioState.Default -> {}
                             else -> {
                                 updateCompose()
                             }
@@ -105,6 +105,10 @@ class AudiosFragment : Fragment(R.layout.fragment_audios) {
         audiosViewModel.intent(AudiosViewModel.ViewIntent.DeleteAudio(id))
     }
 
+    private fun addAudio(audio: Audio) {
+        audiosViewModel.intent(AudiosViewModel.ViewIntent.AddAudio(audio))
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
 //        _binding = null
@@ -115,12 +119,13 @@ class AudiosFragment : Fragment(R.layout.fragment_audios) {
         state: AudioState,
         callFetch: () -> Unit,
         deleteAudio: (id: Int) -> Unit,
+        addAudio: (Audio) -> Unit,
     ) {
         AudioListScreen(
             state = state,
             callFetch = callFetch,
             deleteAudio = deleteAudio,
-            addAudio = { }
+            addAudio = addAudio,
         )
     }
 

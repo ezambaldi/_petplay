@@ -14,8 +14,8 @@ class AudioUseCaseImpl(
     private val coroutineContextProvider: CoroutineContextProvider,
 ): AudioUseCase {
 
-    override suspend fun addAudio(audio: Audio) {
-        localAudioRepository.addAudio(
+    override suspend fun addAudio(audio: Audio): GenericResult<String> {
+        return localAudioRepository.addAudio(
             AudioDomain(
                 id = audio.id,
                 name = audio.name,

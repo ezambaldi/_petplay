@@ -2,6 +2,7 @@ package br.com.zambaldi.petplay.ui.audios
 
 import android.annotation.SuppressLint
 import android.os.Build.VERSION.SDK_INT
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,19 +22,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.Icon
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
-import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,25 +67,50 @@ import com.example.myapplicationtest.utils.bodyLargeBold
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import kotlinx.coroutines.delay
+import okhttp3.internal.notify
 import kotlin.time.Duration.Companion.seconds
 
-@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun AudioListScreen(
     state: AudioState,
     callFetch: () -> Unit,
     deleteAudio: (id: Int) -> Unit,
-    addAudio: (String) -> Unit,
+    addAudio: (Audio) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDialog = false
+    var isAddDialogVisible by remember { mutableStateOf(isDialog) }
+    val scaffoldState = rememberScrollState()
+    if(isAddDialogVisible) {
+        AddAudio(
+            onConfirmation = addAudio,
+            showDialog = true,
+        )
+    }
     Scaffold(
         topBar = { },
         floatingActionButton = {
-            ButtonAdd(
-               onConfirmation = addAudio
-            )
+            FloatingActionButton(
+                onClick = {
+                    isAddDialogVisible = true
+                }
+                ,
+                contentColor = Color.White,
+                modifier = Modifier
+                    .padding(end = 32.dp)
+                    .background(colorResource(id = R.color.md_theme_dark_tertiaryContainer))
+            ) {
+                Icon(
+                    painterResource(id = R.drawable.ic_add),
+                    "Floating action button."
+                )
+            }
+//            ButtonAdd(
+//               onConfirmation = addAudio
+//            )
         },
-        content = {
+        content = { paddingValues ->
+            Log.d("Padding values", "$paddingValues")
             val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = false)
             SwipeRefresh(
                 state = swipeRefreshState,
@@ -129,24 +156,26 @@ fun AudioListScreen(
 
 @Composable
 fun ButtonAdd(
-    onConfirmation: (String) -> Unit
+    onConfirmation: (Audio) -> Unit
 ) {
-    var isAddDialogVisible by remember { mutableStateOf(false) }
+    val isAddDialogVisible = remember { mutableStateOf(true) }
+    if(isAddDialogVisible.value)
+        AddAudio(
+            onConfirmation = onConfirmation
+        )
     FloatingActionButton(
-        onClick = { isAddDialogVisible = true },
-        backgroundColor = colorResource(id = R.color.md_theme_dark_tertiaryContainer),
+        onClick = {
+            isAddDialogVisible.value = true }
+        ,
         contentColor = Color.White,
         modifier = Modifier
             .padding(end = 32.dp)
+            .background(colorResource(id = R.color.md_theme_dark_tertiaryContainer))
         ) {
         Icon(
             painterResource(id = R.drawable.ic_add),
             "Floating action button."
         )
-        if(isAddDialogVisible)
-            AddAudio(
-                onConfirmation = { onConfirmation }
-            )
     }
 }
 
@@ -310,7 +339,7 @@ fun AudioScreenSuccess(
 
                 }
             }
-            if(state is AudioState.Loaded) {
+//            if(state is AudioState.Loaded) {
                 var message = ""
                 if(state.isShowTopMessage) {
                     message = if(state.typeMessage == TypeMessage.SUCCESS)
@@ -321,7 +350,7 @@ fun AudioScreenSuccess(
                         typeMessage = state.typeMessage
                     )
                 }
-            }
+//            }
 
         }
     }
@@ -373,13 +402,14 @@ fun AlertDialogWithBtn(
 
 @Composable
 fun AddAudio(
-    onConfirmation: (String) -> Unit,
+    onConfirmation: (Audio) -> Unit,
+    showDialog: Boolean = false,
 ) {
     val txtFieldError = remember { mutableStateOf("") }
     val txtField = remember { mutableStateOf("") }
-    val onDismiss = remember { mutableStateOf(true) }
-    if(onDismiss.value) {
-        Dialog(onDismissRequest = { onDismiss.value = true } ) {
+    var onDismiss by remember { mutableStateOf(showDialog) }
+    if(onDismiss) {
+        Dialog(onDismissRequest = {  } ) {
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = Color.White
@@ -403,7 +433,7 @@ fun AddAudio(
                                 contentDescription = "",
                                 tint = colorResource(android.R.color.darker_gray),
                                 modifier = Modifier
-                                    .clickable { onDismiss.value = false }
+                                    .clickable { onDismiss = false }
                                     .width(30.dp)
                                     .height(30.dp)
                             )
@@ -421,8 +451,7 @@ fun AddAudio(
                                     ),
                                     shape = RoundedCornerShape(50)
                                 ),
-                            colors = TextFieldDefaults.textFieldColors(
-                                backgroundColor = Color.Transparent,
+                            colors = TextFieldDefaults.colors(
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent
                             ),
@@ -453,8 +482,13 @@ fun AddAudio(
                                         txtFieldError.value = msgError
                                         return@Button
                                     }
-                                    onConfirmation(txtField.value)
-                                    onDismiss.value = false
+                                    onConfirmation(
+                                        Audio(
+                                            name = txtField.value,
+                                            path = "test",
+                                        )
+                                    )
+                                    onDismiss = false
                                 },
                                 shape = RoundedCornerShape(50.dp),
                                 modifier = Modifier

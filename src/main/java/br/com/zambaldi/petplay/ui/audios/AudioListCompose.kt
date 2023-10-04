@@ -1,6 +1,5 @@
 package br.com.zambaldi.petplay.ui.audios
 
-import android.annotation.SuppressLint
 import android.os.Build.VERSION.SDK_INT
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
@@ -29,13 +28,13 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,7 +66,6 @@ import com.example.myapplicationtest.utils.bodyLargeBold
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import kotlinx.coroutines.delay
-import okhttp3.internal.notify
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -78,36 +76,126 @@ fun AudioListScreen(
     addAudio: (Audio) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isDialog = false
-    var isAddDialogVisible by remember { mutableStateOf(isDialog) }
-    val scaffoldState = rememberScrollState()
-    if(isAddDialogVisible) {
-        AddAudio(
-            onConfirmation = addAudio,
-            showDialog = true,
-        )
-    }
+
     Scaffold(
         topBar = { },
         floatingActionButton = {
+            var onDismiss = remember { mutableStateOf(false) }
+            val txtFieldError = remember { mutableStateOf("") }
+            val txtField = remember { mutableStateOf("") }
+            if(onDismiss.value) {
+                Dialog(onDismissRequest = { } ) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.White
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(modifier = Modifier.padding(20.dp)) {
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = stringResource(id = R.string.title_add_audio),
+                                        style = bodyLargeBold
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "",
+                                        tint = colorResource(android.R.color.darker_gray),
+                                        modifier = Modifier
+                                            .clickable { onDismiss.value = false }
+                                            .width(30.dp)
+                                            .height(30.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(20.dp))
+
+                                TextField(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(
+                                            BorderStroke(
+                                                width = 2.dp,
+                                                color = colorResource(id = if (txtFieldError.value.isEmpty()) android.R.color.holo_green_light else android.R.color.holo_red_dark)
+                                            ),
+                                            shape = RoundedCornerShape(50)
+                                        ),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent
+                                    ),
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Build,
+                                            contentDescription = "",
+                                            tint = colorResource(android.R.color.holo_green_light),
+                                            modifier = Modifier
+                                                .width(20.dp)
+                                                .height(20.dp)
+                                        )
+                                    },
+                                    placeholder = { Text(text = stringResource(id = R.string.enter_name)) },
+                                    value = txtField.value,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                                    onValueChange = {
+                                        txtField.value = it.take(10)
+                                    })
+
+                                Spacer(modifier = Modifier.height(20.dp))
+
+                                val msgError = stringResource(id = R.string.msg_empty_field)
+                                Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
+                                    Button(
+                                        onClick = {
+                                            if (txtField.value.isEmpty()) {
+                                                txtFieldError.value = msgError
+                                                return@Button
+                                            }
+                                            addAudio(
+                                                Audio(
+                                                    name = txtField.value,
+                                                    path = "test",
+                                                )
+                                            )
+                                            onDismiss.value = false
+                                            txtField.value = ""
+                                        },
+                                        shape = RoundedCornerShape(50.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(50.dp)
+                                    ) {
+                                        Text(text = stringResource(id = R.string.btn_confirm))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             FloatingActionButton(
                 onClick = {
-                    isAddDialogVisible = true
+                    onDismiss.value = true
                 }
                 ,
                 contentColor = Color.White,
+                containerColor = colorResource(id = R.color.md_theme_dark_tertiaryContainer),
                 modifier = Modifier
                     .padding(end = 32.dp)
-                    .background(colorResource(id = R.color.md_theme_dark_tertiaryContainer))
             ) {
                 Icon(
                     painterResource(id = R.drawable.ic_add),
                     "Floating action button."
                 )
             }
-//            ButtonAdd(
-//               onConfirmation = addAudio
-//            )
         },
         content = { paddingValues ->
             Log.d("Padding values", "$paddingValues")
@@ -152,31 +240,6 @@ fun AudioListScreen(
             }
         }
     )
-}
-
-@Composable
-fun ButtonAdd(
-    onConfirmation: (Audio) -> Unit
-) {
-    val isAddDialogVisible = remember { mutableStateOf(true) }
-    if(isAddDialogVisible.value)
-        AddAudio(
-            onConfirmation = onConfirmation
-        )
-    FloatingActionButton(
-        onClick = {
-            isAddDialogVisible.value = true }
-        ,
-        contentColor = Color.White,
-        modifier = Modifier
-            .padding(end = 32.dp)
-            .background(colorResource(id = R.color.md_theme_dark_tertiaryContainer))
-        ) {
-        Icon(
-            painterResource(id = R.drawable.ic_add),
-            "Floating action button."
-        )
-    }
 }
 
 @Composable
@@ -287,7 +350,7 @@ fun AudioScreenSuccess(
     deleteAudio: (id: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val audios: List<Audio> = remember { state.data }
+    val audios: List<Audio> = state.data
     Column(
         horizontalAlignment = Alignment.Start,
         modifier = modifier
@@ -403,104 +466,5 @@ fun AlertDialogWithBtn(
 @Composable
 fun AddAudio(
     onConfirmation: (Audio) -> Unit,
-    showDialog: Boolean = false,
 ) {
-    val txtFieldError = remember { mutableStateOf("") }
-    val txtField = remember { mutableStateOf("") }
-    var onDismiss by remember { mutableStateOf(showDialog) }
-    if(onDismiss) {
-        Dialog(onDismissRequest = {  } ) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(id = R.string.title_add_audio),
-                                style = bodyLargeBold
-                            )
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "",
-                                tint = colorResource(android.R.color.darker_gray),
-                                modifier = Modifier
-                                    .clickable { onDismiss = false }
-                                    .width(30.dp)
-                                    .height(30.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        TextField(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(
-                                    BorderStroke(
-                                        width = 2.dp,
-                                        color = colorResource(id = if (txtFieldError.value.isEmpty()) android.R.color.holo_green_light else android.R.color.holo_red_dark)
-                                    ),
-                                    shape = RoundedCornerShape(50)
-                                ),
-                            colors = TextFieldDefaults.colors(
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Build,
-                                    contentDescription = "",
-                                    tint = colorResource(android.R.color.holo_green_light),
-                                    modifier = Modifier
-                                        .width(20.dp)
-                                        .height(20.dp)
-                                )
-                            },
-                            placeholder = { Text(text = stringResource(id = R.string.enter_name)) },
-                            value = txtField.value,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                            onValueChange = {
-                                txtField.value = it.take(10)
-                            })
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        val msgError = stringResource(id = R.string.msg_empty_field)
-                        Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
-                            Button(
-                                onClick = {
-                                    if (txtField.value.isEmpty()) {
-                                        txtFieldError.value = msgError
-                                        return@Button
-                                    }
-                                    onConfirmation(
-                                        Audio(
-                                            name = txtField.value,
-                                            path = "test",
-                                        )
-                                    )
-                                    onDismiss = false
-                                },
-                                shape = RoundedCornerShape(50.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(50.dp)
-                            ) {
-                                Text(text = stringResource(id = R.string.btn_confirm))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
